@@ -1,0 +1,11 @@
+{
+  "name": "dokra-health-workspace",
+  "version": "1.0.0",
+  "description": "Dokra Health Platform Workspace",
+  "scripts": {
+    "start": "npm --prefix backend/card-service start",
+    "admin": "npm --prefix backend/card-service start",
+    "test": "npm --prefix backend/card-service test"
+  },
+  "private": true
+}

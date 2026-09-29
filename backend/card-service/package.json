@@ -1,0 +1,26 @@
+{
+  "name": "@dokra/card-service",
+  "version": "1.0.0",
+  "description": "Dokra Health - Home Service Card Backend MVP & Compatibility Adapter",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test tests/card-service.test.js tests/auth-service.test.js tests/staging-integration.test.js tests/admin-studio.test.js tests/generic-providers.test.js tests/screen-registry-deep.test.js tests/vitality-domain-step2.test.js tests/sports-domain-step3.test.js tests/sleep-domain-step4.test.js",
+    "test:admin": "node --test tests/admin-studio.test.js tests/screen-registry-deep.test.js tests/vitality-domain-step2.test.js tests/sports-domain-step3.test.js tests/sleep-domain-step4.test.js",
+    "test:vitality": "node --test tests/vitality-domain-step2.test.js",
+    "test:sports": "node --test tests/sports-domain-step3.test.js",
+    "test:sleep": "node --test tests/sleep-domain-step4.test.js",
+    "test:auth": "node --test tests/auth-service.test.js",
+    "test:cards": "node --test tests/card-service.test.js",
+    "test:staging": "node --test tests/staging-integration.test.js",
+    "test:providers": "node --test tests/generic-providers.test.js",
+    "test:registry": "node --test tests/screen-registry-deep.test.js"
+  },
+  "keywords": ["dokra", "health", "card-service", "webservice-adapter"],
+  "author": "Dokra Health Engineering",
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}
