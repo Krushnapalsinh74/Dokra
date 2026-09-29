@@ -165,24 +165,49 @@ function createCardServer(options = {}) {
         return sendJson(200, { status: 'OK', service: 'dokra-card-service', timestamp: new Date().toISOString() });
       }
 
-      // 1b. Static Logo & Assets Serving
-      if (method === 'GET' && (pathname === '/assets/dokra-logo.png' || pathname === '/dokra-logo.png' || pathname === '/favicon.ico' || pathname.startsWith('/assets/'))) {
-        const logoPath = path.resolve(__dirname, '../public/assets/dokra-logo.png');
-        if (fs.existsSync(logoPath)) {
-          const stat = fs.statSync(logoPath);
+      // 1b. Static Assets Serving
+      if (method === 'GET' && (pathname === '/dokra-logo.png' || pathname === '/favicon.ico' || pathname.startsWith('/assets/'))) {
+        let relPath = pathname.startsWith('/assets/') ? pathname.replace(/^\/assets\//, '') : pathname.replace(/^\//, '');
+        if (relPath === 'favicon.ico') relPath = 'dokra-logo.png';
+        const safePath = path.resolve(__dirname, '../public/assets', path.basename(relPath));
+        if (fs.existsSync(safePath) && fs.statSync(safePath).isFile()) {
+          const stat = fs.statSync(safePath);
+          const ext = path.extname(safePath).toLowerCase();
+          const mimeTypes = {
+            '.png': 'image/png',
+            '.webp': 'image/webp',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.svg': 'image/svg+xml',
+            '.ico': 'image/x-icon',
+            '.json': 'application/json'
+          };
+          const contentType = mimeTypes[ext] || 'application/octet-stream';
           res.writeHead(200, {
-            'Content-Type': 'image/png',
+            'Content-Type': contentType,
             'Content-Length': stat.size,
             'Cache-Control': 'public, max-age=86400',
             'Access-Control-Allow-Origin': '*'
           });
-          return fs.createReadStream(logoPath).pipe(res);
+          return fs.createReadStream(safePath).pipe(res);
         }
       }
 
       // 2. Master Admin Studio Web UI
       if (method === 'GET' && (pathname === '/' || pathname === '/admin' || pathname === '/admin/' || pathname === '/admin/studio')) {
         return sendHtml(200, renderCardStudioHtml());
+      }
+
+      // 2-sub. Studio Engine Modular Script
+      if (method === 'GET' && pathname === '/admin/studio-engine.js') {
+        const enginePath = path.resolve(__dirname, 'studio-engine.js');
+        const code = fs.readFileSync(enginePath, 'utf8');
+        res.writeHead(200, {
+          'Content-Type': 'application/javascript; charset=utf-8',
+          'Cache-Control': 'no-cache'
+        });
+        res.end(code);
+        return;
       }
 
       // 2a. Real-Time Live Sync Server-Sent Events (SSE) Endpoint (< 1s sync with mobile app & preview)
