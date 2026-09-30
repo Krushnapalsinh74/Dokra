@@ -22,9 +22,12 @@ const { FeedService } = require('./feed-service');
 const { AdminService } = require('./admin-service');
 const { AuthService } = require('./auth-service');
 const { renderCardStudioHtml } = require('./studio-ui');
+const { renderDokraLoginHtml } = require('./dokra-login-ui');
+const { UserStore } = require('./user-store');
 
 function createCardServer(options = {}) {
   const db = options.database || new CardDatabase(options.dbPath || ':memory:');
+  const userStore = new UserStore();
   const feedService = new FeedService(db);
   const adminService = new AdminService(db);
   const authService = options.authService || new AuthService(options.authOptions || {});
@@ -196,6 +199,71 @@ function createCardServer(options = {}) {
       // 2. Master Admin Studio Web UI
       if (method === 'GET' && (pathname === '/' || pathname === '/admin' || pathname === '/admin/' || pathname === '/admin/studio')) {
         return sendHtml(200, renderCardStudioHtml());
+      }
+
+      // 2-auth. Dokra Web Login Page & API
+      if (method === 'GET' && (pathname === '/auth/login' || pathname === '/dokra/login' || pathname === '/login')) {
+        return sendHtml(200, renderDokraLoginHtml());
+      }
+
+      if (method === 'POST' && pathname === '/auth/login') {
+        const body = await readJsonBody();
+        const email = (body && body.email) ? body.email.trim() : 'alex.runner@dokra.health';
+        const token = 'dokra_session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+        const namePart = email.includes('@') ? email.split('@')[0] : 'Dokra User';
+        return sendJson(200, {
+          success: true,
+          token: token,
+          user: {
+            id: 'usr_' + Date.now(),
+            name: namePart.charAt(0).toUpperCase() + namePart.slice(1),
+            email: email
+          }
+        });
+      }
+
+      // 2-user. User Data Synchronization APIs (Per-UID Real User Isolation)
+      if (pathname.startsWith('/api/v1/users/')) {
+        const parts = pathname.split('/');
+        // /api/v1/users/:uid/:resource
+        const uid = parts[4] || 'usr_alex_runner';
+        const resource = parts[5] || 'profile';
+
+        if (resource === 'profile') {
+          if (method === 'GET') {
+            return sendJson(200, userStore.getProfile(uid));
+          }
+          if (method === 'PUT' || method === 'POST') {
+            const body = await readJsonBody();
+            const updated = userStore.updateProfile(uid, body);
+            broadcastSync('user_profile_updated', { uid, profile: updated });
+            return sendJson(200, updated);
+          }
+        }
+
+        if (resource === 'telemetry') {
+          if (method === 'GET') {
+            return sendJson(200, userStore.getTelemetry(uid));
+          }
+          if (method === 'PUT' || method === 'POST') {
+            const body = await readJsonBody();
+            const updated = userStore.updateTelemetry(uid, body);
+            broadcastSync('user_telemetry_updated', { uid, telemetry: updated });
+            return sendJson(200, updated);
+          }
+        }
+
+        if (resource === 'workouts') {
+          if (method === 'GET') {
+            return sendJson(200, userStore.getWorkouts(uid));
+          }
+          if (method === 'POST') {
+            const body = await readJsonBody();
+            const created = userStore.addWorkout(uid, body);
+            broadcastSync('user_workout_added', { uid, workout: created });
+            return sendJson(201, created);
+          }
+        }
       }
 
       // 2-sub. Studio Engine Modular Script
